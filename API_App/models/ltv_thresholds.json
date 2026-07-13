@@ -1,0 +1,12 @@
+{
+  "q25": 3146.6599999999994,
+  "q50": 6111.35,
+  "q75": 11101.9225,
+  "levels": [
+    "Basso",
+    "Medio-basso",
+    "Medio-alto",
+    "Alto"
+  ],
+  "note": "Per classificare un nuovo cliente: ltv <= q25 -> Basso; <= q50 -> Medio-basso; <= q75 -> Medio-alto; altrimenti Alto."
+}

@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explainable Campaign Targeting Simulator</title>
+<style>
+  :root {
+    --ink: #1B2430;
+    --ink-panel: #232E3D;
+    --ink-border: #33404F;
+    --amber: #E8A33D;
+    --green: #4CAF82;
+    --red: #D96C6C;
+    --text: #E8EAED;
+    --text-muted: #9AA5B1;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+  }
+
+  header {
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--ink-border);
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  header p {
+    margin: 6px 0 0;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    max-width: 640px;
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: minmax(340px, 460px) 1fr;
+    gap: 28px;
+    padding: 28px 40px 60px;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--ink-panel);
+    border: 1px solid var(--ink-border);
+    border-radius: 10px;
+    padding: 22px 24px;
+  }
+
+  fieldset {
+    border: none;
+    padding: 0;
+    margin: 0 0 20px;
+  }
+
+  legend {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--amber);
+    font-weight: 600;
+    margin-bottom: 10px;
+    padding: 0;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+  }
+
+  input, select {
+    width: 100%;
+    background: var(--ink);
+    border: 1px solid var(--ink-border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 7px 9px;
+    font-size: 0.88rem;
+    font-family: var(--mono);
+  }
+
+  input:focus, select:focus {
+    outline: 2px solid var(--amber);
+    outline-offset: 1px;
+    border-color: var(--amber);
+  }
+
+  button[type="submit"] {
+    margin-top: 18px;
+    width: 100%;
+    background: var(--amber);
+    color: #1B2430;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+  }
+
+  button[type="submit"]:hover { filter: brightness(1.08); }
+  button[type="submit"]:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
+
+  /* --- Risultati --- */
+
+  .empty-state {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    padding: 40px 10px;
+    text-align: center;
+    border: 1px dashed var(--ink-border);
+    border-radius: 10px;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  .badge-includi { background: rgba(76, 175, 130, 0.18); color: var(--green); border: 1px solid var(--green); }
+  .badge-escludi { background: rgba(217, 108, 108, 0.18); color: var(--red); border: 1px solid var(--red); }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+  }
+
+  .uplift-score {
+    font-family: var(--mono);
+    font-size: 2.1rem;
+    font-weight: 700;
+  }
+
+  .uplift-score-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* Control/treatment comparison bar */
+  .uplift-bar-wrap {
+    margin: 18px 0 26px;
+  }
+
+  .uplift-bar-track {
+    position: relative;
+    height: 34px;
+    background: var(--ink);
+    border: 1px solid var(--ink-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .uplift-bar-control {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: linear-gradient(90deg, #4A5A6E, #5A6C82);
+  }
+
+  .uplift-bar-treatment {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--amber), #F0B85E);
+    border-right: 2px solid var(--ink);
+  }
+
+  .uplift-bar-legend {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+    font-family: var(--mono);
+  }
+
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .metric {
+    background: var(--ink);
+    border: 1px solid var(--ink-border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .metric-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .metric-value {
+    font-family: var(--mono);
+    font-size: 1.15rem;
+    margin-top: 4px;
+  }
+
+  h3.section-title {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+
+  .feature-row {
+    display: grid;
+    grid-template-columns: 180px 1fr 70px;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--ink-border);
+    font-size: 0.85rem;
+  }
+
+  .feature-row:last-child { border-bottom: none; }
+
+  .feature-bar-track {
+    position: relative;
+    height: 8px;
+    background: var(--ink);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .feature-bar-fill {
+    position: absolute;
+    top: 0; bottom: 0;
+    border-radius: 4px;
+  }
+
+  .feature-bar-fill.positive { background: var(--green); left: 50%; }
+  .feature-bar-fill.negative { background: var(--red); right: 50%; }
+
+  .feature-value {
+    font-family: var(--mono);
+    text-align: right;
+    color: var(--text-muted);
+  }
+
+  .error-box {
+    background: rgba(217, 108, 108, 0.12);
+    border: 1px solid var(--red);
+    color: var(--red);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 0.88rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Explainable Campaign Targeting Simulator</h1>
+  <p>Enter a client's historical data to estimate the incremental effect (uplift) of a marketing campaign, with an operational recommendation and an explanation of the most relevant variables.</p>
+</header>
+
+<main>
+  <!-- Form -->
+  <form class="panel" method="post" action="/web/predict">
+
+    <fieldset>
+      <legend>Demographics</legend>
+      <div class="field-grid">
+        <div>
+          <label for="age">Age</label>
+          <input type="number" id="age" name="age" min="14" max="120" required
+                 value="{{ values.age if values else 45 }}">
+        </div>
+        <div>
+          <label for="gender">Gender</label>
+          <select id="gender" name="gender">
+            <option value="F" {% if values and values.gender == 'F' %}selected{% endif %}>F</option>
+            <option value="M" {% if values and values.gender == 'M' %}selected{% endif %}>M</option>
+            <option value="U" {% if values and values.gender == 'U' %}selected{% endif %}>U (unknown)</option>
+          </select>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Purchase history</legend>
+      <div class="field-grid">
+        <div>
+          <label for="n_transactions_pre">Transactions</label>
+          <input type="number" id="n_transactions_pre" name="n_transactions_pre" min="0" required
+                 value="{{ values.n_transactions_pre if values else 20 }}">
+        </div>
+        <div>
+          <label for="total_revenue_pre">Total spend</label>
+          <input type="number" step="0.01" id="total_revenue_pre" name="total_revenue_pre" min="0" required
+                 value="{{ values.total_revenue_pre if values else 8500 }}">
+        </div>
+        <div>
+          <label for="avg_basket_value_pre">Average basket value</label>
+          <input type="number" step="0.01" id="avg_basket_value_pre" name="avg_basket_value_pre" min="0" required
+                 value="{{ values.avg_basket_value_pre if values else 425 }}">
+        </div>
+        <div>
+          <label for="tenure_days">Loyalty tenure (days)</label>
+          <input type="number" id="tenure_days" name="tenure_days" min="0" required
+                 value="{{ values.tenure_days if values else 400 }}">
+        </div>
+        <div>
+          <label for="recency_days_pre">Days since last purchase</label>
+          <input type="number" step="0.01" id="recency_days_pre" name="recency_days_pre" min="0" required
+                 value="{{ values.recency_days_pre if values else 5 }}">
+        </div>
+        <div>
+          <label for="is_new_customer">Customer with no pre-campaign history (0/1)</label>
+          <input type="number" id="is_new_customer" name="is_new_customer" min="0" max="1"
+                 value="{{ values.is_new_customer if values else 0 }}">
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Products</legend>
+      <div class="field-grid">
+        <div>
+          <label for="n_product_lines">Total product lines</label>
+          <input type="number" id="n_product_lines" name="n_product_lines" min="0" required
+                 value="{{ values.n_product_lines if values else 150 }}">
+        </div>
+        <div>
+          <label for="n_distinct_products">Distinct products</label>
+          <input type="number" id="n_distinct_products" name="n_distinct_products" min="0" required
+                 value="{{ values.n_distinct_products if values else 95 }}">
+        </div>
+        <div>
+          <label for="total_quantity">Total quantity</label>
+          <input type="number" step="0.01" id="total_quantity" name="total_quantity" min="0" required
+                 value="{{ values.total_quantity if values else 210 }}">
+        </div>
+        <div>
+          <label for="total_iss_sum">Estimated net spend</label>
+          <input type="number" step="0.01" id="total_iss_sum" name="total_iss_sum" min="0" required
+                 value="{{ values.total_iss_sum if values else 8100 }}">
+        </div>
+        <div>
+          <label for="share_alcohol_lines">Alcohol share (0-1)</label>
+          <input type="number" step="0.01" id="share_alcohol_lines" name="share_alcohol_lines" min="0" max="1"
+                 value="{{ values.share_alcohol_lines if values else 0.01 }}">
+        </div>
+        <div>
+          <label for="share_own_trademark_lines">Private label share (0-1)</label>
+          <input type="number" step="0.01" id="share_own_trademark_lines" name="share_own_trademark_lines" min="0" max="1"
+                 value="{{ values.share_own_trademark_lines if values else 0.2 }}">
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Loyalty / points</legend>
+      <div class="field-grid">
+        <div>
+          <label for="has_redeemed">Redeemed welcome coupon (0/1)</label>
+          <input type="number" id="has_redeemed" name="has_redeemed" min="0" max="1"
+                 value="{{ values.has_redeemed if values else 1 }}">
+        </div>
+        <div>
+          <label for="total_regular_points_received_pre">Regular points received</label>
+          <input type="number" step="0.01" id="total_regular_points_received_pre" name="total_regular_points_received_pre"
+                 value="{{ values.total_regular_points_received_pre if values else 80 }}">
+        </div>
+        <div>
+          <label for="total_express_points_received_pre">Express points received</label>
+          <input type="number" step="0.01" id="total_express_points_received_pre" name="total_express_points_received_pre"
+                 value="{{ values.total_express_points_received_pre if values else 0 }}">
+        </div>
+        <div>
+          <label for="total_regular_points_spent_pre">Regular points spent</label>
+          <input type="number" step="0.01" id="total_regular_points_spent_pre" name="total_regular_points_spent_pre"
+                 value="{{ values.total_regular_points_spent_pre if values else -50 }}">
+        </div>
+        <div>
+          <label for="total_express_points_spent_pre">Express points spent</label>
+          <input type="number" step="0.01" id="total_express_points_spent_pre" name="total_express_points_spent_pre"
+                 value="{{ values.total_express_points_spent_pre if values else 0 }}">
+        </div>
+      </div>
+    </fieldset>
+
+    <button type="submit">Calculate uplift score</button>
+  </form>
+
+  <!-- Results -->
+  <div class="panel">
+    {% if error %}
+      <div class="error-box"><strong>Prediction error:</strong> {{ error }}</div>
+    {% elif result %}
+      <div class="result-header">
+        <div>
+          <div class="uplift-score-label">Uplift score</div>
+          <div class="uplift-score">{{ "%.4f"|format(result.uplift_score) }}</div>
+        </div>
+        <span class="badge {{ 'badge-includi' if result.raccomandazione == 'Include' else 'badge-escludi' }}">
+          {{ result.raccomandazione }}
+        </span>
+      </div>
+
+      <div class="uplift-bar-wrap">
+        <div class="uplift-bar-track">
+          <div class="uplift-bar-control" style="width: {{ (result.p_control * 100)|round(1) }}%;"></div>
+          <div class="uplift-bar-treatment" style="width: {{ (result.p_treatment * 100)|round(1) }}%;"></div>
+        </div>
+        <div class="uplift-bar-legend">
+          <span>P(purchase | no campaign) = {{ "%.3f"|format(result.p_control) }}</span>
+          <span>P(purchase | with campaign) = {{ "%.3f"|format(result.p_treatment) }}</span>
+        </div>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric">
+          <div class="metric-label">LTV proxy</div>
+          <div class="metric-value">{{ "%.0f"|format(result.ltv_proxy) }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">LTV cluster</div>
+          <div class="metric-value">{{ result.ltv_cluster }}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">&Delta; probability</div>
+          <div class="metric-value">{{ "%.3f"|format(result.p_treatment - result.p_control) }}</div>
+        </div>
+      </div>
+
+      <h3 class="section-title">Most relevant variables (contribution to uplift)</h3>
+      {% set max_abs = result.top_features[0].shap_uplift_contribution|abs %}
+      {% for f in result.top_features %}
+        {% set pct = ((f.shap_uplift_contribution|abs) / max_abs * 50) if max_abs > 0 else 0 %}
+        <div class="feature-row">
+          <span>{{ f.feature }}</span>
+          <div class="feature-bar-track">
+            <div class="feature-bar-fill {{ 'positive' if f.shap_uplift_contribution > 0 else 'negative' }}"
+                 style="width: {{ pct }}%;"></div>
+          </div>
+          <span class="feature-value">{{ "%+.4f"|format(f.shap_uplift_contribution) }}</span>
+        </div>
+      {% endfor %}
+
+    {% else %}
+      <div class="empty-state">Fill in the form and press "Calculate uplift score" to see the estimate.</div>
+    {% endif %}
+  </div>
+</main>
+
+</body>
+</html>

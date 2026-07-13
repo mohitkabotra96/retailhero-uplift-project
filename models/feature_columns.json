@@ -1,0 +1,30 @@
+{
+  "feature_columns": [
+    "age",
+    "n_transactions_pre",
+    "total_revenue_pre",
+    "avg_basket_value_pre",
+    "total_regular_points_received_pre",
+    "total_express_points_received_pre",
+    "total_regular_points_spent_pre",
+    "total_express_points_spent_pre",
+    "n_product_lines",
+    "n_distinct_products",
+    "total_quantity",
+    "total_iss_sum",
+    "share_alcohol_lines",
+    "share_own_trademark_lines",
+    "tenure_days",
+    "recency_days_pre",
+    "has_redeemed",
+    "is_new_customer",
+    "gender_F",
+    "gender_M",
+    "gender_U"
+  ],
+  "gender_categories": [
+    "F",
+    "M",
+    "U"
+  ]
+}
